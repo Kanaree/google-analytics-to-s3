@@ -32,11 +32,11 @@ Parameters:
     AllowedValues: [true, false]
 
 Conditions:
-  SFTPUploadActivate: 
+  SFTPUploadActivate:
     Fn::Equals: [true, Ref: EnableSFTPUpload]
-  GlueTriggerActive: 
+  GlueTriggerActive:
     Fn::Equals: [true, Ref: EnableGlueTrigger]
-  MonitoringActive: 
+  MonitoringActive:
     Fn::Equals: [true, Ref: EnableMonitoring]
 
 Resources:
@@ -56,7 +56,7 @@ Resources:
                     Value: raw/ga/
             Topic:
               Ref: BucketEventsTopic
-              
+
   BucketPermission:
     Type: AWS::SNS::TopicPolicy
     Properties:
@@ -64,13 +64,13 @@ Resources:
         Id: BucketTopicPolicyGA
         Version: 2012-10-17
         Statement:
-          - Sid: GA001 
+          - Sid: GA001
             Effect: Allow
-            Action: 
+            Action:
               - sns:Publish
             Resource:
               Ref: BucketEventsTopic
-            Principal: 
+            Principal:
               Service: 's3.amazonaws.com'
       Topics:
         - Ref: BucketEventsTopic
@@ -133,11 +133,11 @@ Resources:
   FirehoseTransformationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python3.7 
+      Runtime: python3.7
       MemorySize: 128
       Timeout: 60
       ReservedConcurrentExecutions: 5 # remove when the function is safe
-      Handler: main.handler 
+      Handler: main.handler
       CodeUri: ../functions/transformation/
 
   EnrichmentFunction:
@@ -181,7 +181,7 @@ Resources:
     Properties:
       Action: 'lambda:InvokeFunction'
       Principal: 'sns.amazonaws.com'
-      SourceArn: 
+      SourceArn:
         Ref: BucketEventsTopic
       FunctionName:
         Fn::GetAtt: [EnrichmentFunction, Arn]
@@ -205,7 +205,7 @@ Resources:
           Processors:
             - Parameters:
               - ParameterName: LambdaArn
-                ParameterValue: 
+                ParameterValue:
                   Fn::GetAtt: [FirehoseTransformationFunction, Arn]
               Type: Lambda
 
@@ -227,7 +227,7 @@ Resources:
     Properties:
       RestApiId:
         Ref: ApiGatewayRestApi
-      ParentId: 
+      ParentId:
         Fn::GetAtt: [ApiGatewayRestApi, RootResourceId]
       PathPart: com.google.analytics
 
@@ -236,20 +236,20 @@ Resources:
     Properties:
       RestApiId:
         Ref: ApiGatewayRestApi
-      ParentId: 
+      ParentId:
         Ref: GoogleAnalyticsResource
       PathPart: v1
-    
+
 # Methods ########
 #
-# ###############  
+# ###############
 
   ApiGatewayPostMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: 
-        Ref: GoogleAnalyticsVersion 
-      ApiKeyRequired: false 
+      ResourceId:
+        Ref: GoogleAnalyticsVersion
+      ApiKeyRequired: false
       AuthorizationType: NONE
       HttpMethod: POST
       Integration:
@@ -264,7 +264,7 @@ Resources:
               - ":firehose:action/PutRecord" #this URI basically describes the service and action I want to invoke.
         IntegrationHttpMethod: POST #for kinesis using POST is required
         RequestTemplates:
-          text/plain: !Sub | 
+          text/plain: !Sub |
             #set( $system_source = "system_source")
             #set( $system_source_val = "ga")
             #set( $system_version = "system_version")
@@ -285,7 +285,7 @@ Resources:
             #set( $quote = '"' )
             #set( $b64 = $util.base64Encode("{$quote$system_source$quote:$quote$system_source_val$quote,$quote$system_version$quote:$quote$system_version_val$quote,$quote$message_id$quote:$quote$message_id_val$quote,$quote$trace_id$quote:$quote$trace_id_val$quote,$quote$received_at_apig$quote:$quote$received_at_apig_val$quote,$quote$ip$quote:$quote$ip_val$quote, $quote$user_agent$quote:$quote$user_agent_val$quote,$quote$body$quote:$quote$body_val$quote}"))
             {
-             "DeliveryStreamName": "${EventFirehose}", 
+             "DeliveryStreamName": "${EventFirehose}",
              "Record": {"Data": "$b64"}
             }
         RequestParameters:
@@ -297,7 +297,7 @@ Resources:
             ResponseParameters:
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
               method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'" 
+              method.response.header.Access-Control-Allow-Origin: "'*'"
       MethodResponses:
         - StatusCode: 200
           ResponseParameters:
@@ -335,7 +335,7 @@ Resources:
       - ApiGatewayPostMethod
     Properties:
       RestApiId: !Ref ApiGatewayRestApi
-      StageName: 
+      StageName:
         Fn::Sub: ${Stage}
 
 
@@ -355,7 +355,7 @@ Resources:
       Path: "/"
       Policies:
         -
-          PolicyName: 
+          PolicyName:
             Fn::Sub: "${Name}S3AccessGlueRoleDataBuckeet${Stage}"
           PolicyDocument:
             Version: 2012-10-17
@@ -378,7 +378,7 @@ Resources:
                     - - Fn::GetAtt: [ DataBucket , Arn ]
                       - "/*"
         -
-          PolicyName: 
+          PolicyName:
             Fn::Sub: "${Name}S3AccessGlueRole${Stage}"
           PolicyDocument:
             Version: 2012-10-17
@@ -391,9 +391,9 @@ Resources:
                   - s3:GetObject
                   - s3:ListBucket
                   - s3:ListBucketMultipartUploads
-                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn 
+                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn
         -
-          PolicyName: 
+          PolicyName:
             Fn::Sub: "${Name}GlueRoleCloudWatchLogs${Stage}"
           PolicyDocument:
             Version: 2012-10-17
@@ -401,10 +401,10 @@ Resources:
               -
                 Effect: "Allow"
                 Action:
-                  - logs:* 
-                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn 
+                  - logs:*
+                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn
         -
-          PolicyName: 
+          PolicyName:
             Fn::Sub: "${Name}GlueRoleCloudWatchMetric${Stage}"
           PolicyDocument:
             Version: 2012-10-17
@@ -412,15 +412,15 @@ Resources:
               -
                 Effect: "Allow"
                 Action:
-                  - cloudwatch:* 
-                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn 
+                  - cloudwatch:*
+                Resource: "*" # ! need to give least privilege permission, change from * to exact resource arn
 
   GlueJob:
     Type: AWS::Glue::Job
     Properties:
-      GlueVersion: 1.0 
+      GlueVersion: 1.0
       DefaultArguments:
-        "--s3bucket": 
+        "--s3bucket":
           Ref: DataBucket
         "--enable-metrics": "true"
         "--enable-continuous-cloudwatch-log": "true"
@@ -432,7 +432,7 @@ Resources:
       ExecutionProperty:
         MaxConcurrentRuns: 2
       MaxRetries: 0
-      Name: 
+      Name:
         Fn::Sub: "${Name}-${Stage}"
       Timeout: 60
       Role:
@@ -447,7 +447,7 @@ Resources:
       Environment:
         Variables:
           JOB_NAME:
-            Ref: GlueJob 
+            Ref: GlueJob
       ReservedConcurrentExecutions: 1
       Handler: main.handler
       CodeUri: ../functions/job-executor
@@ -456,23 +456,23 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: cron(0 3 * * ? *)
-            Name: 
+            Name:
               Fn::Sub: "${Name}-Glue-Trigger-Function-${Stage}"
-            Description: runs a function every day at 3am 
+            Description: runs a function every day at 3am
             Enabled: True
       Policies:
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:
-                - glue:StartJobRun 
+                - glue:StartJobRun
               Resource:
-                - "*" 
+                - "*"
   GlueTrigger:
     Condition: GlueTriggerActive
     Type: AWS::Glue::Trigger
     Properties:
-      Type: "SCHEDULED" 
+      Type: "SCHEDULED"
       Description: A trigger that triggers a Glue job every night at 2am
       Schedule: cron(0 2 * * ? *)
       Actions:
@@ -489,7 +489,7 @@ Resources:
       ContentUri: ../functions/lambda-layers/paramiko/
       CompatibleRuntimes:
         - python3.7
-      LicenseInfo: MIT should be added here 
+      LicenseInfo: MIT should be added here
       RetentionPolicy: Retain
 
   SFTPLayerPermission:
@@ -518,14 +518,14 @@ Resources:
       Handler: main.handler
       CodeUri: ../functions/sftp-uploader/
       Layers:
-        - Ref: SFTPLayer 
+        - Ref: SFTPLayer
       Events:
         ScheduleUpload:
           Type: Schedule
           Properties:
             Schedule: cron(0 3 * * ? *)
             Name: my-upload-function
-            Description: runs a function every day at 3am 
+            Description: runs a function every day at 3am
             Enabled: True
       Policies:
         - Version: '2012-10-17'
@@ -605,10 +605,10 @@ Resources:
   GlueDatabase:
       Type: AWS::Glue::Database
       Properties:
-        CatalogId: 
+        CatalogId:
           Ref: AWS::AccountId
         DatabaseInput:
-          Name: 
+          Name:
             Fn::Sub: "${Name}_${Stage}"
 
   GlueCrawler:
@@ -617,15 +617,15 @@ Resources:
       DatabaseName:
         Ref: GlueDatabase
       Description: "The default crawler"
-      Name: 
-        Fn::Sub: "${Name}-${Stage}" 
+      Name:
+        Fn::Sub: "${Name}-${Stage}"
       Role:
         Fn::GetAtt: [GlueCrawlerRole, Arn]
       Schedule:
-        ScheduleExpression: "cron(0 4 * * ? *)" 
+        ScheduleExpression: "cron(0 4 * * ? *)"
       Targets:
         S3Targets:
-          - Path: 
+          - Path:
               Fn::Join:
                 - ""
                 - - Ref: DataBucket
@@ -648,7 +648,7 @@ Resources:
             - sts:AssumeRole
       Path: "/"
       Policies:
-        - PolicyName: 
+        - PolicyName:
             Fn::Sub: "${Name}GlueCrawlerS3ObjectPolicy${Stage}"
           PolicyDocument:
             Version: '2012-10-17'
@@ -664,21 +664,21 @@ Resources:
                 - Fn::GetAtt: [DataBucket, Arn]
                 - Fn::Join:
                     - ""
-                    - - Fn::GetAtt: [DataBucket, Arn] 
+                    - - Fn::GetAtt: [DataBucket, Arn]
                       - "/aggregated*"
-        - PolicyName: 
+        - PolicyName:
             Fn::Sub: "${Name}GlueCrawlerCloudWatchPolicy${Stage}"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
             - Effect: Allow
               Action:
-                - logs:CreateLogGroup 
+                - logs:CreateLogGroup
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource:
-                Fn::Sub: "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*" 
-        - PolicyName: 
+                Fn::Sub: "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*"
+        - PolicyName:
             Fn::Sub: "${Name}GlueCrawlerDatabasePolicy${Stage}"
           PolicyDocument:
             Version: '2012-10-17'
@@ -692,7 +692,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Role: 
+      Role:
         Fn::GetAtt: [GlueConfigurationRole, Arn]
       Code:
         ZipFile: |
@@ -720,7 +720,7 @@ Resources:
             } catch (e) { respond(e); }
           };
       Timeout: 30
-      Runtime: nodejs8.10
+      Runtime: nodejs12.x
 
   GlueConfigurationRole:
     Type: AWS::IAM::Role
@@ -729,10 +729,10 @@ Resources:
         Version: '2012-10-17'
         Statement:
         - Effect: Allow
-          Principal: 
-            Service: 
+          Principal:
+            Service:
               - lambda.amazonaws.com
-          Action: 
+          Action:
             - 'sts:AssumeRole'
       Path: /
       ManagedPolicyArns:
@@ -750,9 +750,9 @@ Resources:
   CrawlerConfiguration:
     Type: Custom::CrawlerConfiguration
     Properties:
-      ServiceToken: 
+      ServiceToken:
         Fn::GetAtt: [GlueConfigurationLambda, Arn]
-      CrawlerName: 
+      CrawlerName:
         Ref: GlueCrawler
       Configuration:
         Version: '1.0'
@@ -761,15 +761,14 @@ Resources:
             AddOrUpdateBehavior: InheritFromTable
 Outputs:
   CollectorEndpoint:
-    Description: URL of the endpoint that should be used with Google Analytics Duplicator 
+    Description: URL of the endpoint that should be used with Google Analytics Duplicator
     Value:
       Fn::Join:
         - ""
         - - https://
-          - Ref: ApiGatewayRestApi 
+          - Ref: ApiGatewayRestApi
           - '.execute-api.'
           - Ref: 'AWS::Region'
           - '.amazonaws.com/'
-          - Fn::Sub: ${Stage} 
+          - Fn::Sub: ${Stage}
           - "/"
-
